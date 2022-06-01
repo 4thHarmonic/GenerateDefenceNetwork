@@ -19,13 +19,14 @@ def read_nodes(sheet):
 
 
 def add_vals(sheet, df, overview):
+    """Add time phased project values to a type of nodes"""
     vals = pd.pivot_table(overview, index=sheet, values=val_cols, aggfunc=np.sum)
     df = df.merge(vals, left_on='Name', right_index=True)
     return df
 
 
 def calculate_sic_flows(overview):
-    """Calculate the flows of sic funding by period"""
+    """Calculate the flows of sic funding from each program by period"""
     num_sic_col = 'Number of SICs'
 
     def calc_num_sics(row):
@@ -76,7 +77,7 @@ def calculate_sic_flows(overview):
 
 
 def read_inputs():
-    """Read the spreadsheet into two dfs"""
+    """Read the spreadsheet info and create nodes and dfs"""
     overview = read_sheet(input_file, 'Overview', val_cols=val_cols)
     # node inputs
     md = read_nodes('Military Domain')
@@ -112,7 +113,7 @@ def read_inputs():
 
 
 def format_edges(df, s_col, t_col):
-    """format two cols in df as edges"""
+    """format two cols in df as a df of edges"""
     new_edges = df[[s_col, t_col]].copy()
     new_edges = new_edges[new_edges[s_col].notna()]
     new_edges = new_edges[new_edges[t_col].notna()]
@@ -144,7 +145,7 @@ def create_edges(overview, ss):
 
 
 def create_prime_flows(overview, target):
-    """Create the project flows to the primes"""
+    """Create the project flows to a target part of a prime supply chain"""
     summary = overview.copy()
 
     def calc_val(row):
@@ -160,7 +161,7 @@ def create_prime_flows(overview, target):
 
 def create_prime_networks(nodes, edges, overview, sic_sum):
     """create nodes and edges for the prime supply chains to SICs"""
-
+    # create the additional targets needed on overview
     overview['Foreign as % of Total'] = 1 - overview['AIC as % of Total']
     overview['SIC as % of Total'] = overview['AIC as % of Total'] * overview['SIC as % of AIC']
     # create nodes: Aus Supply Chain
@@ -173,7 +174,7 @@ def create_prime_networks(nodes, edges, overview, sic_sum):
     os_nodes['Name'] = "Overseas supply chain for " + os_nodes['Prime Contractor']
     os_nodes['Description'] = os_nodes['Prime Contractor'] + " Overseas supply chain"
     os_nodes['Node Type'] = 'Overseas supply chain'
-    # create nodes: ToT
+    # create nodes: ToT (not visualised in this version)
     tot_nodes = create_prime_flows(overview, 'ToT as % of Total')
     tot_nodes['Name'] = "ToT commitments for " + tot_nodes['Prime Contractor']
     tot_nodes['Description'] = 'Transfers of technology facilitated by' + tot_nodes['Prime Contractor']
@@ -218,9 +219,9 @@ def create_prime_networks(nodes, edges, overview, sic_sum):
 
 def format_network(nodes, edges):
     """Prepare the network"""
-    nodes = fill_nodes(nodes)
+    nodes = fill_nodes(nodes, val_cols)
     edges = fill_edges(edges)
-    # remove duplicate program nodes
+    # adjust duplicate program nodes to be shared effectors
     shared_caps = ['ISR', 'GBAD', 'Munitions Procurement and Manufacture']
     nodes.loc[nodes['Name'].isin(shared_caps), 'Node Type'] = 'Shared effector'
     cols = ['Name', 'Node Type']
@@ -254,10 +255,9 @@ if __name__ == '__main__':
     input_file = find_latest_input_file(core_file)
     # generate the model
     nat_nodes, nat_edges = create_national_model()
-    # if save to excel
+    # save to excel
     data_path = '/home/charles/Desktop'
-    output_file = os.path.join(data_path,
-                               'National Defence for Polinode v2.xlsx')
+    output_file = os.path.join(data_path, 'National Defence for Polinode v2.xlsx')
     save_file(nat_nodes, nat_edges, output_file)
     # if upload_model_to_polinode()
     network_name = 'Charles Test 4'

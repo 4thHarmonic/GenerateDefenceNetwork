@@ -24,11 +24,9 @@ def read_sheet(file_address, sheet, val_cols=[], col_types={}, rows_to_skip=0):
     return df
 
 
-def fill_nodes(nodes):
+def fill_nodes(nodes, num_cols):
     """Fill in gaps in nodes"""
-    node_val_cols = ['Total spending in $B', 'Spending 2021-25 in $B', 'Spending 2026-30 in $B',
-                     'Spending 2031-35 in $B', 'Spending 2036-40 in $B']
-    nodes[node_val_cols] = nodes[node_val_cols].fillna(0)
+    nodes[num_cols] = nodes[num_cols].fillna(0)
     nodes = nodes.fillna('')
     return nodes
 
